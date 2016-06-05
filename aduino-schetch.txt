@@ -1,0 +1,63 @@
+#include <SHT1x.h>
+#define dataPin 2
+#define clockPin 3
+SHT1x sht1x(dataPin, clockPin);
+
+#include "Timer.h"
+Timer t;
+
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(5,6);//RX TX
+SoftwareSerial cSerial(10, 11);
+
+char ch;
+int Co2 = 0;
+float temperature=0;
+float humidity=0;
+
+void repeat()
+{
+  
+  char b[] = { 0x11, 0x01, 0x01, 0xED };    
+  byte r[40]; 
+  int c; 
+  cSerial.write(b, 4);  
+  if ((c = cSerial.readBytes(r, 8)) < 8) { 
+  Serial.println("co2 error "+ String(c)); 
+    return; 
+  }  
+  Co2 = (r[3] * 256) + r[4]; 
+  temperature=sht1x.readTemperatureC();
+  humidity=sht1x.readHumidity();
+  mySerial.println("&tempe="+String(sht1x.readTemperatureC())+"&co2="+Co2+"&humi="+String(sht1x.readHumidity()));
+   
+}
+void setup(void)
+{
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  cSerial.begin(9600);
+
+  Serial.println("Zimi & idle");
+  
+  analogWrite(9,255);
+  t.every(3000, repeat);
+}
+
+void loop(void)
+{
+  t.update();  
+  
+   while(mySerial.available()) {
+    ch = (char)mySerial.read();
+    Serial.print(ch);
+    if( ch == '0' )
+      analogWrite( 9, 192 );
+    else if( ch == '1' )
+      analogWrite( 9, 120 );
+    else if( ch == '2' )
+      analogWrite( 9, 60 );
+    else if( ch == '3' )
+      analogWrite( 9, 0);
+      }
+}
